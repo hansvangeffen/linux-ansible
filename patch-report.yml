@@ -40,6 +40,16 @@
         path: /var/run/reboot-required
       register: reboot_required
 
-    - name: Show report line
+    - name: Build CSV report
+      ansible.builtin.set_fact:
+        patch_report_line: "{{ inventory_hostname }};{{ ansible_default_ipv4.address | default('n/a') }};{{ ansible_distribution }} {{ ansible_distribution_version }};{{ ansible_kernel }};{{ update_count.stdout | default('n/a') }};{{ security_count.stdout | default('n/a') }};{{ reboot_required.stat.exists }}"
+
+    - name: Show CSV report
+      run_once: true
+      delegate_to: localhost
       ansible.builtin.debug:
-        msg: "PATCHREPORT;{{ inventory_hostname }};{{ ansible_default_ipv4.address | default('n/a') }};{{ ansible_distribution }} {{ ansible_distribution_version }};{{ ansible_kernel }};updates={{ update_count.stdout | default('n/a') }};security={{ security_count.stdout | default('n/a') }};reboot={{ reboot_required.stat.exists }}"
+        msg: |
+          Server;IP;OS;Kernel;Updates;Security updates;Reboot nodig
+          {% for host in ansible_play_hosts %}
+          {{ hostvars[host].patch_report_line }}
+          {% endfor %}
