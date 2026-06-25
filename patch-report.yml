@@ -5,7 +5,18 @@
   gather_facts: true
 
   tasks:
+    - name: Check become user
+      become: true
+      ansible.builtin.command: whoami
+      register: whoami_result
+      changed_when: false
+
+    - name: Show become user
+      ansible.builtin.debug:
+        var: whoami_result.stdout
+
     - name: Update apt cache
+      become: true
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
