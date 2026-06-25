@@ -1,0 +1,34 @@
+---
+- name: Patch status rapport Linux servers
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+      when: ansible_os_family == "Debian"
+
+    - name: Count available updates
+      ansible.builtin.shell: apt list --upgradable 2>/dev/null | tail -n +2 | wc -l
+      register: update_count
+      changed_when: false
+      when: ansible_os_family == "Debian"
+
+    - name: Count security updates
+      ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -Ei "security|ubuntu-security" | wc -l
+      register: security_count
+      changed_when: false
+      when: ansible_os_family == "Debian"
+
+    - name: Check reboot required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Show report line
+      ansible.builtin.debug:
+        msg: "PATCHREPORT;{{ inventory_hostname }};{{ ansible_default_ipv4.address | default('n/a') }};{{ ansible_distribution }} {{ ansible_distribution_version }};{{ ansible_kernel }};updates={{ update_count.stdout | default('n/a') }};security={{ security_count.stdout | default('n/a') }};reboot={{ reboot_required.stat.exists }}"
