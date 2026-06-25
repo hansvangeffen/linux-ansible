@@ -53,3 +53,54 @@
           {% for host in ansible_play_hosts %}
           {{ hostvars[host].patch_report_line }}
           {% endfor %}
+          
+    - name: Create HTML patch report
+      run_once: true
+      delegate_to: 10.84.20.25
+      ansible.builtin.copy:
+        dest: /var/tmp/linux-patch-report.html
+        mode: '0640'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Linux Patch Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 30px; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+              th { background: #f2f2f2; }
+              .high { background: #ffd6d6; }
+              .medium { background: #fff3cd; }
+              .ok { background: #d4edda; }
+            </style>
+          </head>
+          <body>
+            <h1>Linux Patch Report</h1>
+            <p>Gegenereerd: {{ ansible_date_time.date }} {{ ansible_date_time.time }}</p>
+
+            <table>
+              <tr>
+                <th>Server</th>
+                <th>IP</th>
+                <th>OS</th>
+                <th>Kernel</th>
+                <th>Updates</th>
+                <th>Security updates</th>
+                <th>Reboot nodig</th>
+              </tr>
+              {% for host in ansible_play_hosts %}
+              <tr class="{% if hostvars[host].security_count.stdout | int > 20 %}high{% elif hostvars[host].security_count.stdout | int > 0 %}medium{% else %}ok{% endif %}">
+                <td>{{ host }}</td>
+                <td>{{ hostvars[host].ansible_default_ipv4.address | default('n/a') }}</td>
+                <td>{{ hostvars[host].ansible_distribution }} {{ hostvars[host].ansible_distribution_version }}</td>
+                <td>{{ hostvars[host].ansible_kernel }}</td>
+                <td>{{ hostvars[host].update_count.stdout | default('n/a') }}</td>
+                <td>{{ hostvars[host].security_count.stdout | default('n/a') }}</td>
+                <td>{{ hostvars[host].reboot_required.stat.exists }}</td>
+              </tr>
+              {% endfor %}
+            </table>
+          </body>
+          </html>
